@@ -1,0 +1,63 @@
+/**
+ * Admin styles for HivePress & WooCommerce Menu Integration
+ */
+
+.hpwc-link-row {
+    background: #f9f9f9;
+    padding: 15px;
+    border: 1px solid #e5e5e5;
+    border-radius: 3px;
+    margin-bottom: 15px;
+}
+
+.hpwc-link-field {
+    margin-bottom: 15px;
+}
+
+.hpwc-visibility-options {
+    margin-bottom: 10px;
+}
+
+.hpwc-roles-selector {
+    background: #f1f1f1;
+    padding: 10px;
+    border-radius: 3px;
+    margin-top: 10px;
+}
+
+.hpwc-roles-selector label {
+    margin-right: 15px;
+    margin-bottom: 5px;
+    display: inline-block;
+}
+
+/* Disabled inputs */
+.hpwc-url-input:disabled,
+.hpwc-page-select:disabled {
+    background-color: #f7f7f7;
+    color: #999;
+}
+
+/* Settings sections */
+.hpwc-menu-settings {
+    margin-top: 20px;
+}
+
+.hpwc-menu-settings h3 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+/* Responsive fixes */
+@media screen and (max-width: 782px) {
+    .hpwc-link-row input[type="text"],
+    .hpwc-link-row select {
+        width: 100%;
+    }
+    
+    .hpwc-roles-selector label {
+        display: block;
+        margin-bottom: 10px;
+    }
+}
