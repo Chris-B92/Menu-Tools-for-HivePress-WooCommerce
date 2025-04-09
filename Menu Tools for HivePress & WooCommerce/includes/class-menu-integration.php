@@ -140,32 +140,20 @@ class HPWC_Menu_Integration {
             __('Hide WooCommerce Menu Items', 'hpwc-menu'),
             function() {
                 $excluded = (array) get_option('hpwc_menu_excluded_wc_items', []);
-                $default_wc_items = [
-                    'dashboard' => __('Dashboard', 'woocommerce'),
-                    'orders' => __('Orders', 'woocommerce'),
-                    'downloads' => __('Downloads', 'woocommerce'),
-                    'edit-address' => __('Addresses', 'woocommerce'),
-                    'edit-account' => __('Account details', 'woocommerce'),
-                ];
-                if (function_exists('wc_get_account_menu_items')) {
-                    $wc_items = wc_get_account_menu_items();
-                    foreach ($wc_items as $key => $label) {
-                        if ($key === 'customer-logout' || strpos($key, 'custom-') === 0 || strpos($key, 'hp-') === 0) {
-                            continue;
-                        }
-                        $default_wc_items[$key] = $label;
-                    }
-                }
+                $default_wc_items = $this->get_woocommerce_pages_list();
                 echo '<input type="hidden" name="hpwc_menu_excluded_wc_items" value="">';
                 wp_nonce_field('hpwc_menu_settings_save', 'hpwc_menu_settings_nonce');
                 if (!empty($default_wc_items)) {
                     echo '<div style="margin-bottom: 10px;">';
                     foreach ($default_wc_items as $key => $label) {
-                        $checked = in_array($key, $excluded, true) ? 'checked' : '';
-                        echo '<label style="display: block; margin-bottom: 5px;">';
-                        echo '<input type="checkbox" name="hpwc_menu_excluded_wc_items[]" value="' . esc_attr($key) . '" ' . $checked . '> ';
-                        echo esc_html($label);
-                        echo '</label>';
+                        if ($key === 'dashboard' || strpos($key, 'myaccount_') === 0) {
+                            $endpoint = $key === 'dashboard' ? 'dashboard' : substr($key, 10);
+                            $checked = in_array($endpoint, $excluded, true) ? 'checked' : '';
+                            echo '<label style="display: block; margin-bottom: 5px;">';
+                            echo '<input type="checkbox" name="hpwc_menu_excluded_wc_items[]" value="' . esc_attr($endpoint) . '" ' . $checked . '> ';
+                            echo esc_html($label);
+                            echo '</label>';
+                        }
                     }
                     echo '</div>';
                 } else {
@@ -184,16 +172,22 @@ class HPWC_Menu_Integration {
                 $links = get_option('hpwc_menu_custom_links', []);
                 $visibility_settings = get_option('hpwc_menu_custom_links_visibility', []);
                 if (empty($links) || !is_array($links)) {
-                    $links = [['label' => '', 'type' => 'wp_page', 'page_id' => '', 'url' => '', 'menu_location' => 'both', 'position' => 'top']];
+                    $links = [['label' => '', 'type' => 'wp_page', 'page_id' => '', 'url' => '', 'wc_page' => '', 'hp_route' => '', 'menu_location' => 'both', 'position' => 'top']];
                 }
                 $roles = wp_roles()->get_names();
                 $pages = get_pages(['sort_column' => 'post_title', 'sort_order' => 'ASC']);
+                $wc_pages = $this->get_woocommerce_pages_list();
+                $hp_routes = $this->get_hivepress_routes_list();
                 echo '<div id="hpwc-links-container">';
                 foreach ($links as $index => $link) {
                     if (!is_array($link)) {
-                        $link = ['label' => '', 'type' => 'wp_page', 'page_id' => '', 'url' => '', 'menu_location' => 'both', 'position' => 'top'];
+                        $link = ['label' => '', 'type' => 'wp_page', 'page_id' => '', 'url' => '', 'wc_page' => '', 'hp_route' => '', 'menu_location' => 'both', 'position' => 'top'];
                     }
                     $current_visibility = $visibility_settings[$index] ?? [];
+                    $checked_wp_page = ($link['type'] === 'wp_page') ? 'checked' : '';
+                    $checked_custom = ($link['type'] === 'custom') ? 'checked' : '';
+                    $checked_wc_page = ($link['type'] === 'wc_page') ? 'checked' : '';
+                    $checked_hp_route = ($link['type'] === 'hp_route') ? 'checked' : '';
                     echo '<div class="hpwc-link-row" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee;">';
                     echo '<div class="hpwc-link-field" style="margin-bottom: 10px;">';
                     echo '<label style="font-weight: bold; display: block; margin-bottom: 5px;">' . esc_html__('Label', 'hpwc-menu') . '</label>';
@@ -202,8 +196,8 @@ class HPWC_Menu_Integration {
                     echo '<div class="hpwc-link-field" style="margin-bottom: 10px;">';
                     echo '<label style="font-weight: bold; display: block; margin-bottom: 5px;">' . esc_html__('Link Source', 'hpwc-menu') . '</label>';
                     echo '<div style="margin-bottom: 10px;">';
-                    echo '<label style="margin-right: 10px;"><input type="radio" name="hpwc_menu_custom_links[' . $index . '][type]" value="wp_page" class="hpwc-link-type" ' . ($link['type'] === 'wp_page' ? 'checked' : '') . '> ' . esc_html__('Select a page:', 'hpwc-menu') . '</label>';
-                    echo '<select name="hpwc_menu_custom_links[' . $index . '][page_id]" class="hpwc-wp-page-select" style="width: 300px;" ' . ($link['type'] !== 'wp_page' ? 'disabled' : '') . '>';
+                    echo '<label style="margin-right: 10px;"><input type="radio" name="hpwc_menu_custom_links[' . $index . '][type]" value="wp_page" class="hpwc-link-type" ' . $checked_wp_page . '> ' . esc_html__('WordPress Page:', 'hpwc-menu') . '</label>';
+                    echo '<select name="hpwc_menu_custom_links[' . $index . '][page_id]" class="hpwc-wp-page-select" style="width: 300px;">';
                     echo '<option value="">' . esc_html__('-- Select a page --', 'hpwc-menu') . '</option>';
                     foreach ($pages as $page) {
                         $selected = (isset($link['page_id']) && $link['page_id'] == $page->ID) ? 'selected' : '';
@@ -211,9 +205,29 @@ class HPWC_Menu_Integration {
                     }
                     echo '</select>';
                     echo '</div>';
+                    echo '<div style="margin-bottom: 10px;">';
+                    echo '<label style="margin-right: 10px;"><input type="radio" name="hpwc_menu_custom_links[' . $index . '][type]" value="custom" class="hpwc-link-type" ' . $checked_custom . '> ' . esc_html__('Custom URL:', 'hpwc-menu') . '</label>';
+                    echo '<input type="text" name="hpwc_menu_custom_links[' . $index . '][url]" value="' . esc_attr($link['url'] ?? '') . '" placeholder="' . esc_attr__('https://example.com/page', 'hpwc-menu') . '" style="width: 300px;" class="hpwc-url-input">';
+                    echo '</div>';
+                    echo '<div style="margin-bottom: 10px;">';
+                    echo '<label style="margin-right: 10px;"><input type="radio" name="hpwc_menu_custom_links[' . $index . '][type]" value="wc_page" class="hpwc-link-type" ' . $checked_wc_page . '> ' . esc_html__('WooCommerce Page:', 'hpwc-menu') . '</label>';
+                    echo '<select name="hpwc_menu_custom_links[' . $index . '][wc_page]" class="hpwc-wc-page-select" style="width: 300px;">';
+                    echo '<option value="">' . esc_html__('-- Select a WooCommerce page --', 'hpwc-menu') . '</option>';
+                    foreach ($wc_pages as $slug => $label) {
+                        $selected = (isset($link['wc_page']) && $link['wc_page'] == $slug) ? 'selected' : '';
+                        echo '<option value="' . esc_attr($slug) . '" ' . $selected . '>' . esc_html($label) . '</option>';
+                    }
+                    echo '</select>';
+                    echo '</div>';
                     echo '<div>';
-                    echo '<label style="margin-right: 10px;"><input type="radio" name="hpwc_menu_custom_links[' . $index . '][type]" value="custom" class="hpwc-link-type" ' . ($link['type'] === 'custom' ? 'checked' : '') . '> ' . esc_html__('Custom URL:', 'hpwc-menu') . '</label>';
-                    echo '<input type="text" name="hpwc_menu_custom_links[' . $index . '][url]" value="' . esc_attr($link['url'] ?? '') . '" placeholder="' . esc_attr__('https://example.com/page', 'hpwc-menu') . '" style="width: 300px;" class="hpwc-url-input" ' . ($link['type'] !== 'custom' ? 'disabled' : '') . '>';
+                    echo '<label style="margin-right: 10px;"><input type="radio" name="hpwc_menu_custom_links[' . $index . '][type]" value="hp_route" class="hpwc-link-type" ' . $checked_hp_route . '> ' . esc_html__('HivePress Route:', 'hpwc-menu') . '</label>';
+                    echo '<select name="hpwc_menu_custom_links[' . $index . '][hp_route]" class="hpwc-hp-route-select" style="width: 300px;">';
+                    echo '<option value="">' . esc_html__('-- Select a HivePress route --', 'hpwc-menu') . '</option>';
+                    foreach ($hp_routes as $route => $label) {
+                        $selected = (isset($link['hp_route']) && $link['hp_route'] == $route) ? 'selected' : '';
+                        echo '<option value="' . esc_attr($route) . '" ' . $selected . '>' . esc_html($label) . '</option>';
+                    }
+                    echo '</select>';
                     echo '</div>';
                     echo '</div>';
                     echo '<div class="hpwc-link-field" style="margin-bottom: 10px;">';
@@ -402,10 +416,10 @@ class HPWC_Menu_Integration {
         }
         $in_process = true;
         foreach ($menu_items as $key => $label) {
-            if (strpos($key, 'subscriptions') !== false || strpos($label, 'Subscription #') !== false) {
-                unset($menu_items[$key]);
-            }
-        }
+    if (strpos($key, 'subscriptions') !== false || strpos($label, 'Subscription #') !== false) {
+        unset($menu_items[$key]);
+    }
+}
         $custom_links = get_option('hpwc_menu_custom_links', []);
         $user_id = get_current_user_id();
         $top_links = [];
@@ -415,10 +429,14 @@ class HPWC_Menu_Integration {
                 ($link['menu_location'] === 'woocommerce' || $link['menu_location'] === 'both') && 
                 $this->is_link_visible_to_user($index, $user_id)) {
                 $unique_key = 'custom-' . $index;
-                if (isset($link['position']) && $link['position'] === 'bottom') {
-                    $bottom_links[$unique_key] = $link['label'];
-                } else {
-                    $top_links[$unique_key] = $link['label'];
+                $url = $this->get_custom_link_url($link);
+                if ($url) {
+                    if (isset($link['position']) && $link['position'] === 'bottom') {
+                        $bottom_links[$unique_key] = $link['label'];
+                    } else {
+                        $top_links[$unique_key] = $link['label'];
+                    }
+                    $this->hp_urls[$unique_key] = $url;
                 }
             }
         }
@@ -533,13 +551,8 @@ class HPWC_Menu_Integration {
                 ($link['menu_location'] === 'hivepress' || $link['menu_location'] === 'both') && 
                 $this->is_link_visible_to_user($index, $user_id)) {
                 $unique_key = 'custom-' . $index;
-                $url = '';
-                if ($link['type'] === 'wp_page' && !empty($link['page_id'])) {
-                    $url = get_permalink($link['page_id']);
-                } elseif ($link['type'] === 'custom' && !empty($link['url'])) {
-                    $url = $link['url'];
-                }
-                if (!empty($url)) {
+                $url = $this->get_custom_link_url($link);
+                if ($url) {
                     $order_value = ($link['position'] === 'bottom') ? $max_order - 5 : $min_order - 5;
                     $menu['items'][$unique_key] = [
                         'label' => $link['label'],
@@ -576,6 +589,166 @@ class HPWC_Menu_Integration {
     }
 
     /**
+     * Get custom link URL based on type
+     */
+    private function get_custom_link_url($link) {
+        $url = '';
+        if ($link['type'] === 'wp_page' && !empty($link['page_id'])) {
+            $url = get_permalink($link['page_id']);
+        } elseif ($link['type'] === 'custom' && !empty($link['url'])) {
+            $url = $link['url'];
+        } elseif ($link['type'] === 'wc_page' && !empty($link['wc_page'])) {
+            if (strpos($link['wc_page'], 'myaccount_') === 0) {
+                $endpoint = substr($link['wc_page'], 10);
+                $url = wc_get_endpoint_url($endpoint, '', wc_get_page_permalink('myaccount'));
+            } else {
+                $page_id = wc_get_page_id($link['wc_page']);
+                if ($page_id) {
+                    $url = get_permalink($page_id);
+                }
+            }
+        } elseif ($link['type'] === 'hp_route' && !empty($link['hp_route'])) {
+            $params = [];
+            if (in_array($link['hp_route'], ['vendor_view_page', 'listings_edit_page']) && is_user_logged_in()) {
+                $current_user_id = get_current_user_id();
+                if ($link['hp_route'] === 'vendor_view_page') {
+                    $vendor_id = \HivePress\Models\Vendor::query()->filter(['user' => $current_user_id])->get_first_id();
+                    if ($vendor_id) {
+                        $params['vendor_id'] = $vendor_id;
+                    }
+                }
+            }
+            $url = hivepress()->router->get_url($link['hp_route'], $params);
+        }
+        return $url;
+    }
+
+    /**
+     * Get WooCommerce pages list for dropdown
+     */
+    private function get_woocommerce_pages_list() {
+        $pages = [
+            'shop' => 'Shop',
+            'cart' => 'Cart',
+            'checkout' => 'Checkout',
+            'myaccount' => 'My Account',
+            'terms' => 'Terms and Conditions',
+        ];
+
+        $endpoints = [
+            'dashboard' => 'My Account - Dashboard',
+            'orders' => 'My Account - Orders',
+            'downloads' => 'My Account - Downloads',
+            'edit-address' => 'My Account - Addresses',
+            'edit-account' => 'My Account - Account Details',
+            'payment-methods' => 'My Account - Payment Methods',
+            'lost-password' => 'My Account - Lost Password',
+        ];
+
+        // WooCommerce Subscriptions
+        if (class_exists('WC_Subscriptions')) {
+            $endpoints['subscriptions'] = 'My Account - Subscriptions';
+        }
+
+        // WooCommerce Bookings
+        if (class_exists('WC_Bookings')) {
+            $endpoints['bookings'] = 'My Account - Bookings';
+        }
+
+        // WooCommerce Memberships
+        if (class_exists('WC_Memberships')) {
+            $endpoints['members-area'] = 'My Account - Memberships';
+        }
+
+        // WooCommerce Wishlists (YITH)
+        if (class_exists('YITH_WCWL')) {
+            $endpoints['wishlist'] = 'My Account - Wishlist';
+        }
+
+        // WooCommerce Points and Rewards
+        if (class_exists('WC_Points_Rewards')) {
+            $endpoints['points-and-rewards'] = 'My Account - Points and Rewards';
+        }
+
+        // WooCommerce Waitlist
+        if (class_exists('WC_Waitlist')) {
+            $endpoints['waitlist'] = 'My Account - Waitlist';
+        }
+
+        $wc_pages = [];
+        foreach ($pages as $slug => $label) {
+            $wc_pages[$slug] = $label;
+        }
+
+        foreach ($endpoints as $endpoint => $label) {
+            $wc_pages['myaccount_' . $endpoint] = $label;
+        }
+
+        return $wc_pages;
+    }
+
+    /**
+     * Get HivePress routes list for dropdown
+     */
+    private function get_hivepress_routes_list() {
+        $routes = [
+            'listings_view_page' => 'Listings',
+            'listing_submit_page' => 'Add Listing',
+            'user_account_page' => 'My Account',
+            'vendor_view_page' => 'My Vendor Profile',
+            'listings_edit_page' => 'My Listings',
+            'listings_favorite_page' => 'Favorite Listings',
+            'messages_view_page' => 'Messages',
+            'user_listing_packages_view_page' => 'My Listing Packages',
+            'request_submit_page' => 'Submit Request',
+            'requests_view_page' => 'My Requests',
+            'reviews_view_page' => 'Reviews',
+            'vendor_stripe_page' => 'Manage Payouts (Stripe)',
+            'listing_renew_package_page' => 'Renew Listing Package',
+            'listing_submit_package_page' => 'Submit Listing Package',
+            'membership_plan_select_page' => 'Select Membership Plan',
+            'listing_statistics_page' => 'Listing Statistics',
+            'listing_categories_view_page' => 'Listing Categories',
+            'search_alerts_view_page' => 'Search Alerts',
+            'user_edit_settings_page' => 'Account Settings',
+            'orders_view_page' => 'Orders View',
+        ];
+
+        return $routes;
+    }
+
+    /**
+     * Sanitize custom links
+     */
+    public function sanitize_custom_links($links) {
+        $sanitized = [];
+        if (!is_array($links)) {
+            return $sanitized;
+        }
+        foreach ($links as $index => $link) {
+            if (empty($link['label']) || !isset($link['type']) || !in_array($link['type'], ['wp_page', 'custom', 'wc_page', 'hp_route'], true)) {
+                continue;
+            }
+            $sanitized[$index] = [
+                'label' => sanitize_text_field($link['label']),
+                'type' => $link['type'],
+                'menu_location' => in_array($link['menu_location'] ?? '', ['both', 'hivepress', 'woocommerce'], true) ? $link['menu_location'] : 'both',
+                'position' => in_array($link['position'] ?? '', ['top', 'bottom'], true) ? $link['position'] : 'top',
+            ];
+            if ($link['type'] === 'wp_page' && !empty($link['page_id'])) {
+                $sanitized[$index]['page_id'] = absint($link['page_id']);
+            } elseif ($link['type'] === 'custom' && !empty($link['url'])) {
+                $sanitized[$index]['url'] = esc_url_raw($link['url'], ['http', 'https']);
+            } elseif ($link['type'] === 'wc_page' && !empty($link['wc_page'])) {
+                $sanitized[$index]['wc_page'] = sanitize_text_field($link['wc_page']);
+            } elseif ($link['type'] === 'hp_route' && !empty($link['hp_route'])) {
+                $sanitized[$index]['hp_route'] = sanitize_text_field($link['hp_route']);
+            }
+        }
+        return $sanitized;
+    }
+
+    /**
      * Get user-friendly name for HivePress menu items
      */
     private function get_friendly_hp_item_name($key) {
@@ -590,12 +763,7 @@ class HPWC_Menu_Integration {
             'orders_view' => __('Orders', 'hpwc-menu'),
             'user_logout' => __('Sign Out', 'hpwc-menu'),
         ];
-        if (isset($mappings[$key])) {
-            return $mappings[$key];
-        }
-        $label = str_replace('_', ' ', $key);
-        $label = ucwords($label);
-        return $label;
+        return $mappings[$key] ?? ucwords(str_replace('_', ' ', $key));
     }
 
     /**
@@ -669,12 +837,7 @@ class HPWC_Menu_Integration {
             $custom_links = get_option('hpwc_menu_custom_links', []);
             $index = substr($endpoint, 7);
             if (isset($custom_links[$index])) {
-                $link = $custom_links[$index];
-                if ($link['type'] === 'wp_page' && !empty($link['page_id'])) {
-                    return get_permalink($link['page_id']);
-                } elseif ($link['type'] === 'custom' && !empty($link['url'])) {
-                    return $link['url'];
-                }
+                return $this->get_custom_link_url($custom_links[$index]) ?: $url;
             }
         }
         if (strpos($endpoint, 'hp-') === 0) {
@@ -732,58 +895,14 @@ class HPWC_Menu_Integration {
         $current_endpoint = '';
         if (function_exists('is_account_page') && is_account_page()) {
             foreach ($wp->query_vars as $key => $value) {
-                if (strpos($key, 'hp-') === 0) {
-                    $current_endpoint = $key;
-                    $hp_key = substr($current_endpoint, 3);
-                    $hp_url_map = [
-                        'listings_edit' => 'account/listings',
-                        'user_edit_settings' => 'account/settings',
-                        'listings_favorite' => 'account/favorites',
-                        'user_listing_packages_view' => 'account/listing-packages',
-                        'search_alerts_view' => 'account/searches',
-                        'messages_view' => 'account/messages',
-                        'reviews_view' => 'account/reviews',
-                        'orders_view' => 'my-account/orders',
-                    ];
-                    if (isset($hp_url_map[$hp_key])) {
-                        wp_redirect(home_url($hp_url_map[$hp_key]));
-                        exit;
-                    }
-                    if (function_exists('hivepress') && method_exists(hivepress()->router, 'get_url')) {
-                        $page_map = [
-                            'listings_edit' => 'listings_edit_page',
-                            'user_edit_settings' => 'user_edit_settings_page',
-                            'listings_favorite' => 'listings_favorite_page',
-                            'user_listing_packages_view' => 'user_listing_packages_view_page',
-                            'search_alerts_view' => 'search_alerts_view_page',
-                            'messages_view' => 'messages_view_page',
-                            'reviews_view' => 'reviews_view_page',
-                            'orders_view' => 'orders_view_page',
-                        ];
-                        if (isset($page_map[$hp_key])) {
-                            $url = hivepress()->router->get_url($page_map[$hp_key]);
-                            if ($url) {
-                                wp_redirect($url);
-                                exit;
-                            }
-                        }
-                    }
-                    remove_filter('hivepress/v1/menus/user_account', [$this, 'add_custom_links_to_hp_menu'], 1000);
-                    $hp_menu = apply_filters('hivepress/v1/menus/user_account', []);
-                    add_filter('hivepress/v1/menus/user_account', [$this, 'add_custom_links_to_hp_menu'], 1000);
-                    if (isset($hp_menu['items'][$hp_key]) && isset($hp_menu['items'][$hp_key]['url'])) {
-                        wp_redirect($hp_menu['items'][$hp_key]['url']);
-                        exit;
-                    }
-                    break;
-                } else if (strpos($key, 'custom-') === 0) {
+                if (strpos($key, 'hp-') === 0 || strpos($key, 'custom-') === 0) {
                     $current_endpoint = $key;
                     break;
                 }
             }
-            if (strpos($current_endpoint, 'custom-') === 0) {
+            if ($current_endpoint) {
                 $correct_url = $this->modify_menu_item_urls('', $current_endpoint);
-                if (!empty($correct_url) && $correct_url !== '') {
+                if (!empty($correct_url) && $correct_url !== $url) {
                     wp_redirect($correct_url);
                     exit;
                 }
@@ -801,7 +920,11 @@ class HPWC_Menu_Integration {
             if (!empty($excluded_items)) {
                 echo '<style type="text/css">';
                 foreach ($excluded_items as $item) {
-                    echo '.woocommerce-account .woocommerce-MyAccount-navigation-link--' . esc_attr($item) . ' { display: none !important; }';
+                    if ($item === 'dashboard') {
+                        echo '.woocommerce-account .woocommerce-MyAccount-navigation-link--dashboard { display: none !important; }';
+                    } else {
+                        echo '.woocommerce-account .woocommerce-MyAccount-navigation-link--' . esc_attr($item) . ' { display: none !important; }';
+                    }
                 }
                 echo '</style>';
             }
@@ -959,36 +1082,5 @@ class HPWC_Menu_Integration {
         } else {
             wp_send_json_error();
         }
-    }
-
-    /**
-     * Sanitize custom links
-     */
-    public function sanitize_custom_links($links) {
-        $sanitized = [];
-        if (!is_array($links)) {
-            return $sanitized;
-        }
-        foreach ($links as $index => $link) {
-            if (empty($link['label']) || !isset($link['type']) || !in_array($link['type'], ['wp_page', 'custom'], true)) {
-                continue;
-            }
-            $sanitized[$index] = [
-                'label' => sanitize_text_field($link['label']),
-                'type' => $link['type'],
-                'menu_location' => in_array($link['menu_location'] ?? '', ['both', 'hivepress', 'woocommerce'], true) 
-                    ? $link['menu_location'] 
-                    : 'both',
-                'position' => in_array($link['position'] ?? '', ['top', 'bottom'], true)
-                    ? $link['position']
-                    : 'top',
-            ];
-            if ($link['type'] === 'wp_page' && !empty($link['page_id'])) {
-                $sanitized[$index]['page_id'] = absint($link['page_id']);
-            } elseif ($link['type'] === 'custom' && !empty($link['url'])) {
-                $sanitized[$index]['url'] = esc_url_raw($link['url'], ['http', 'https']);
-            }
-        }
-        return $sanitized;
     }
 }
