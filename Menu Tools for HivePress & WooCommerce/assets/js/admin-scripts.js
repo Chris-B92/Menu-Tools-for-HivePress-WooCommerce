@@ -48,16 +48,9 @@ jQuery(document).ready(function($) {
             }
         });
 
+        // Keep all dropdowns enabled; no disabling logic
         $('.hpwc-link-type').off('change').on('change', function() {
-            var row = $(this).closest('.hpwc-link-row');
-            var type = $(this).val();
-            if (type === 'wp_page') {
-                row.find('.hpwc-wp-page-select').prop('disabled', false);
-                row.find('.hpwc-url-input').prop('disabled', true);
-            } else {
-                row.find('.hpwc-wp-page-select').prop('disabled', true);
-                row.find('.hpwc-url-input').prop('disabled', false);
-            }
+            // No action needed here since all inputs remain enabled
         });
 
         $('.hpwc-visibility-roles, .hpwc-visibility-subscription').off('change').on('change', function() {
@@ -70,7 +63,8 @@ jQuery(document).ready(function($) {
             }
         });
 
-        $('.hpwc-link-type').trigger('change');
+        // Ensure all dropdowns and inputs are enabled by default
+        $('.hpwc-wp-page-select, .hpwc-url-input, .hpwc-wc-page-select, .hpwc-hp-route-select').prop('disabled', false);
     }
 
     function reindexInputs() {
