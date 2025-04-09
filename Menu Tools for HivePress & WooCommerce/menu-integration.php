@@ -44,7 +44,6 @@ function hpwc_menu_check_requirements() {
         add_action('admin_notices', function() use ($missing_plugins) {
             echo '<div class="notice notice-error"><p>' .
                 sprintf(
-                    /* translators: %s: List of missing plugins */
                     esc_html__('Menu Tools for HivePress & WooCommerce requires the following plugins: %s.', 'hpwc-menu'),
                     '<strong>' . implode(', ', $missing_plugins) . '</strong>'
                 ) .
@@ -60,18 +59,14 @@ function hpwc_menu_check_requirements() {
  * Initialize the plugin
  */
 function hpwc_menu_init() {
-    // Load text domain using the defined constant
     load_plugin_textdomain('hpwc-menu', false, basename(HPWC_MENU_PLUGIN_DIR) . '/languages');
 
-    // Check requirements
     if (!hpwc_menu_check_requirements()) {
         return;
     }
 
-    // Load the integration class
     require_once HPWC_MENU_PLUGIN_DIR . 'includes/class-menu-integration.php';
 
-    // Initialize the integration
     $integration = new HPWC_Menu_Integration();
     $integration->init();
 }
@@ -90,10 +85,8 @@ function hpwc_menu_maybe_flush_rewrite_rules() {
  * Plugin activation hook
  */
 function hpwc_menu_activate() {
-    // Set flag to flush rewrite rules on next page load
     update_option('hpwc_menu_flush_rules', 'yes');
 
-    // Set default options
     $default_options = [
         'hpwc_menu_enable_integration' => 'yes',
         'hpwc_menu_enable_custom_links' => 'no',
@@ -113,10 +106,7 @@ function hpwc_menu_activate() {
  * Plugin deactivation hook
  */
 function hpwc_menu_deactivate() {
-    // Set flag to flush rewrite rules on next page load
     update_option('hpwc_menu_flush_rules', 'yes');
-
-    // We don't delete options on deactivation - they'll remain if plugin is reactivated
 }
 
 /**
@@ -131,15 +121,9 @@ function hpwc_menu_add_settings_link($links) {
     return $links;
 }
 
-// Register activation and deactivation hooks
 register_activation_hook(__FILE__, 'hpwc_menu_activate');
 register_deactivation_hook(__FILE__, 'hpwc_menu_deactivate');
 
-// Initialize after plugins loaded
 add_action('plugins_loaded', 'hpwc_menu_init', 20);
-
-// Add hook to flush rewrite rules if needed
 add_action('init', 'hpwc_menu_maybe_flush_rewrite_rules');
-
-// Add settings link to plugin action links
 add_filter('plugin_action_links_' . plugin_basename(HPWC_MENU_PLUGIN_FILE), 'hpwc_menu_add_settings_link');
