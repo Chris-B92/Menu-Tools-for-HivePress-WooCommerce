@@ -2,10 +2,6 @@
  * Frontend styles for HivePress & WooCommerce Menu Integration
  */
 
-/* Fix for hiding WC items in HivePress */
-.woocommerce-account .woocommerce-MyAccount-navigation-link--subscriptions {
-    display: none !important;
-}
 
 /* Fix account menu items */
 .woocommerce-account .woocommerce-MyAccount-navigation li a[href*="hp-"] {
