@@ -1,0 +1,41 @@
+/**
+ * Frontend styles for HivePress & WooCommerce Menu Integration
+ */
+
+/* Fix account menu items */
+.woocommerce-account .woocommerce-MyAccount-navigation li a[href*="hp-"] {
+    color: inherit;
+}
+
+/* Fix active state for HivePress menu items in WooCommerce menu */
+body.hivepress-page .woocommerce-MyAccount-navigation-link--hp-listings_edit a,
+body.hivepress-page .woocommerce-MyAccount-navigation-link--hp-user_edit_settings a {
+    font-weight: bold;
+}
+
+/* Make sure HivePress menu items are visible in WooCommerce navigation */
+.woocommerce-account .woocommerce-MyAccount-navigation-link[class*="hp-"],
+.woocommerce-account .woocommerce-MyAccount-navigation-link[class*="custom-"] {
+    display: list-item !important;
+}
+
+/* Fix for menu item styles */
+.woocommerce-account .woocommerce-MyAccount-navigation-link a {
+    text-decoration: none;
+}
+
+/* Fix active state for the menu item */
+.woocommerce-account .woocommerce-MyAccount-navigation-link.is-active a {
+    font-weight: bold;
+}
+
+/* Responsive fixes */
+@media (max-width: 768px) {
+    .woocommerce-account .woocommerce-MyAccount-navigation ul {
+        margin-bottom: 20px;
+    }
+    
+    .woocommerce-account .woocommerce-MyAccount-navigation li {
+        margin-bottom: 10px;
+    }
+}
